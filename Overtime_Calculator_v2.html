@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Time and Overtime Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #000;
+        }
+        th, td {
+            padding: 8px;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+        label, input, button {
+            padding: 8px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        .container {
+            margin-bottom: 20px;
+        }
+        .warning {
+            color: red;
+        }
+        /* Add hover effect for overtime cells */
+        td:hover {
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        /* Color styles for different overtime states */
+        .past {
+            background-color: lightgreen; /* Passed overtime time */
+        }
+        .approaching {
+            background-color: yellow; /* Overtime time soon (approaching) */
+        }
+        .future {
+            background-color: lightgray; /* Future overtime time */
+        }
+        /* Add color styles for Minimum clock-out time */
+        .minimum-past {
+            background-color: green; /* Passed minimum clock-out time */
+            color: white; /* Text color for contrast */
+        }
+        .minimum-approaching {
+            background-color: yellow; /* Approaching minimum clock-out time (within 10 minutes) */
+        }
+        .minimum-future {
+            background-color: lightgray; /* Future minimum clock-out time */
+        }
+        /* Color styles for elapsed and remaining time */
+        .highlight-remaining {
+            color: red; /* Red color for remaining time */
+        }
+        .highlight-elapsed {
+            color: orange; /* Orange color for elapsed time */
+        }
+    </style>
+</head>
+<body>
+    <h1>Work Time and Overtime Calculator</h1>
+
+    <div class="container">
+        <label for="clockInTime">Clock In Time (AM):</label>
+        <input type="time" id="clockInTime" value="08:00">
+
+        <br><br>
+        <button onclick="calculateTimes()">Calculate Overtime</button>
+
+        <div id="lateWarning" class="warning"></div>
+    </div>
+
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>Minimum Clock-out Time</th>
+                <th>1st Overtime (1hr 10min)</th>
+                <th>1 Hour 30 Min Overtime</th>
+                <th>2 Hour Overtime</th>
+                <th>2 Hour 30 Min Overtime</th>
+                <th>3 Hour Overtime</th>
+                <th>3 Hour 30 Min Overtime</th>
+                <th>4 Hour Overtime</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+        <tfoot>
+            <tr id="timeRemainingRow">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <script>
+        function calculateTimes() {
+            const clockInTime = document.getElementById("clockInTime").value;
+
+            if (!clockInTime) {
+                alert("Please enter a valid clock-in time.");
+                return;
+            }
+
+            const clockIn = parseTime(clockInTime);
+
+            const lateWarning = document.getElementById("lateWarning");
+
+            const latestAllowedTime = new Date(2000, 0, 1, 9, 30);
+            if (clockIn > latestAllowedTime) {
+                lateWarning.textContent = "You are late! Clock-in after 9:30 AM is not allowed.";
+                lateWarning.style.display = "block";
+            } else {
+                lateWarning.textContent = "";
+                lateWarning.style.display = "none";
+            }
+
+            const clockInDate = new Date(2000, 0, 1, clockIn.getHours(), clockIn.getMinutes());
+            if (clockInDate < new Date(2000, 0, 1, 7, 30) || clockInDate > new Date(2000, 0, 1, 9, 30)) {
+                alert("Please enter a valid clock-in time between 7:30 AM and 9:30 AM.");
+                return;
+            }
+
+            let minimumClockOutTime = addMinutes(clockIn, 9 * 60 + 30);
+            if (minimumClockOutTime.getHours() < 17 || (minimumClockOutTime.getHours() === 17 && minimumClockOutTime.getMinutes() < 0)) {
+                minimumClockOutTime = new Date(2000, 0, 1, 17, 0); 
+            }
+
+            let overtimeStart = addMinutes(minimumClockOutTime, 10);
+
+            const overtimeTimes = [];
+            let overtimeIntervals = [
+                60,
+                90,
+                120,
+                150,
+                180,
+                210,
+                240
+            ];
+
+            overtimeIntervals.forEach(interval => {
+                overtimeTimes.push(addMinutes(overtimeStart, interval));
+            });
+
+            updateTable(minimumClockOutTime, overtimeTimes, clockInDate);
+        }
+
+        function parseTime(timeString) {
+            const [hours, minutes] = timeString.split(":").map(Number);
+            return new Date(2000, 0, 1, hours, minutes); 
+        }
+
+        function formatTime(date) {
+            let hours = date.getHours();
+            let minutes = date.getMinutes();
+            let period = 'PM'; 
+
+            if (hours > 12) hours -= 12;
+            if (hours === 0) hours = 12;
+
+            if (minutes < 10) minutes = '0' + minutes;
+
+            return `${hours}:${minutes} ${period}`;
+        }
+
+        function addMinutes(date, minutes) {
+            const result = new Date(date);
+            result.setMinutes(result.getMinutes() + minutes);
+            return result;
+        }
+
+        function getElapsedTime(currentTime, overtimeTime) {
+            const diff = currentTime - overtimeTime;
+            const hoursElapsed = Math.floor(diff / (1000 * 60 * 60));
+            const minutesElapsed = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const secondsElapsed = Math.floor((diff % (1000 * 60)) / 1000);
+
+            return `+${hoursElapsed}h ${minutesElapsed}m ${secondsElapsed}s`; 
+        }
+
+        function getRemainingTime(currentTime, overtimeTime) {
+            const diff = overtimeTime - currentTime;
+            if (diff < 0) {
+                return getElapsedTime(currentTime, overtimeTime); 
+            }
+
+            const hoursLeft = Math.floor(diff / (1000 * 60 * 60));
+            const minutesLeft = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const secondsLeft = Math.floor((diff % (1000 * 60)) / 1000);
+
+            return `-${hoursLeft}h ${minutesLeft}m ${secondsLeft}s`; 
+        }
+
+        function updateTable(minimumClockOutTime, overtimeTimes, clockInDate) {
+            const tableBody = document.getElementById("resultsTable").getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = "";
+
+            const currentTime = new Date();
+            currentTime.setFullYear(clockInDate.getFullYear(), clockInDate.getMonth(), clockInDate.getDate());
+
+            const row = tableBody.insertRow();
+
+            const minimumClockOutCell = row.insertCell(0);
+            minimumClockOutCell.textContent = formatTime(minimumClockOutTime);
+            let remainingTime = getRemainingTime(currentTime, minimumClockOutTime);
+            minimumClockOutCell.title = `Time left: ${remainingTime}`;
+
+            const tenMinutesBefore = addMinutes(minimumClockOutTime, -10);
+            if (currentTime >= minimumClockOutTime) {
+                minimumClockOutCell.classList.add("minimum-past"); 
+            } else if (currentTime >= tenMinutesBefore) {
+                minimumClockOutCell.classList.add("minimum-approaching"); 
+            } else {
+                minimumClockOutCell.classList.add("minimum-future"); 
+            }
+
+            overtimeTimes.forEach((time, index) => {
+                const overtimeCell = row.insertCell();
+                overtimeCell.textContent = formatTime(time);
+
+                remainingTime = getRemainingTime(currentTime, time);
+                overtimeCell.title = `Time left: ${remainingTime}`;
+
+                const approachingBeforeTime = (index === 1 || index === 3 || index === 5) ? 10 : 25; // For 1h30m, 2h30m, 3h30m it's 10 minutes, else 25
+
+                const approachingTime = addMinutes(time, -approachingBeforeTime);
+
+                if (currentTime >= time) {
+                    overtimeCell.classList.add("past"); 
+                } else if (currentTime >= approachingTime) {
+                    overtimeCell.classList.add("approaching"); 
+                } else {
+                    overtimeCell.classList.add("future"); 
+                }
+            });
+
+            const timeRemainingRow = document.getElementById("timeRemainingRow");
+            const timeRemainingCells = timeRemainingRow.getElementsByTagName('td');
+
+            timeRemainingCells[0].textContent = `${getRemainingTime(currentTime, minimumClockOutTime)}`;
+            if (currentTime < minimumClockOutTime) {
+                timeRemainingCells[0].classList.add("highlight-remaining");  // Red text for remaining time
+            } else {
+                timeRemainingCells[0].classList.add("highlight-elapsed");  // Orange text for elapsed time
+            }
+
+            overtimeTimes.forEach((time, index) => {
+                if (currentTime < time) {
+                    timeRemainingCells[index + 1].textContent = getRemainingTime(currentTime, time);
+                    timeRemainingCells[index + 1].classList.add("highlight-remaining");  // Red text for remaining time
+                } else {
+                    timeRemainingCells[index + 1].textContent = getElapsedTime(currentTime, time);
+                    timeRemainingCells[index + 1].classList.add("highlight-elapsed");  // Orange text for elapsed time
+                }
+            });
+        }
+    </script>
+</body>
+</html>
