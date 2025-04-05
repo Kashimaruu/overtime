@@ -59,22 +59,14 @@
         .minimum-future {
             background-color: lightgray; /* Future minimum clock-out time */
         }
-        /* Color styles for elapsed and remaining time */
-        .highlight-remaining {
-            color: red; /* Red color for remaining time */
-        }
-        .highlight-elapsed {
-            color: orange; /* Orange color for elapsed time */
-        }
     </style>
 </head>
-<body>
+<body onload="calculateTimes()">
     <h1>Work Time and Overtime Calculator</h1>
 
     <div class="container">
         <label for="clockInTime">Clock In Time (AM):</label>
-        <input type="time" id="clockInTime" value="08:00">
-
+        <input type="time" id="clockInTime" value="08:15">
         <br><br>
         <button onclick="calculateTimes()">Calculate Overtime</button>
 
@@ -110,7 +102,31 @@
         </tfoot>
     </table>
 
+    <h2>History</h2>
+    <table id="historyTable">
+        <thead>
+            <tr>
+                <th>Clock In Time</th>
+                <th>Minimum Clock-out Time</th>
+                <th>1st Overtime (1hr 10min)</th>
+                <th>1 Hour 30 Min Overtime</th>
+                <th>2 Hour Overtime</th>
+                <th>2 Hour 30 Min Overtime</th>
+                <th>3 Hour Overtime</th>
+                <th>3 Hour 30 Min Overtime</th>
+                <th>4 Hour Overtime</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
     <script>
+        let updateInterval;
+        let historyData = [];  // Array to store history entries
+        let clockInTimesSet = new Set();  // Set to track unique clock-in times
+        let isInitialTime = true;  // Flag to check if the default time is used
+
         function calculateTimes() {
             const clockInTime = document.getElementById("clockInTime").value;
 
@@ -133,16 +149,20 @@
             }
 
             const clockInDate = new Date(2000, 0, 1, clockIn.getHours(), clockIn.getMinutes());
-            if (clockInDate < new Date(2000, 0, 1, 7, 30) || clockInDate > new Date(2000, 0, 1, 9, 30)) {
+            // Check if the clock-in time is less than 7:30 AM
+            let minimumClockOutTime;
+            if (clockInDate < new Date(2000, 0, 1, 7, 30)) {
+                // If it's before 7:30 AM, set the minimum clock-out time to 5:00 PM
+                minimumClockOutTime = new Date(2000, 0, 1, 17, 0); 
+            } else if (clockInDate < new Date(2000, 0, 1, 9, 30)) {
+                // If it's between 7:30 AM and 9:30 AM, calculate the minimum clock-out time
+                minimumClockOutTime = addMinutes(clockIn, 9 * 60 + 30);
+            } else {
                 alert("Please enter a valid clock-in time between 7:30 AM and 9:30 AM.");
                 return;
             }
 
-            let minimumClockOutTime = addMinutes(clockIn, 9 * 60 + 30);
-            if (minimumClockOutTime.getHours() < 17 || (minimumClockOutTime.getHours() === 17 && minimumClockOutTime.getMinutes() < 0)) {
-                minimumClockOutTime = new Date(2000, 0, 1, 17, 0); 
-            }
-
+            // Set the overtime start time based on the minimum clock-out time
             let overtimeStart = addMinutes(minimumClockOutTime, 10);
 
             const overtimeTimes = [];
@@ -161,6 +181,33 @@
             });
 
             updateTable(minimumClockOutTime, overtimeTimes, clockInDate);
+
+            // Only add the time to history if it's not the initial default time (8:15 AM)
+            if (!isInitialTime) {
+                const historyEntry = {
+                    clockIn: formatTime(clockIn),
+                    minimumClockOutTime: formatTime(minimumClockOutTime),
+                    overtimeTimes: overtimeTimes.map(time => formatTime(time)),
+                };
+
+                // Check if the clock-in time already exists in the set, to prevent duplicate entries
+                if (!clockInTimesSet.has(historyEntry.clockIn)) {
+                    clockInTimesSet.add(historyEntry.clockIn);  // Add clock-in time to the set
+                    historyData.push(historyEntry);  // Add to history
+                    updateHistoryTable();  // Update history table
+                }
+            }
+
+            // Set the flag to false once the time is changed from the default
+            isInitialTime = false;
+
+            // Set up a real-time update every second
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            updateInterval = setInterval(() => {
+                updateTable(minimumClockOutTime, overtimeTimes, clockInDate);
+            }, 1000);  // Update every second
         }
 
         function parseTime(timeString) {
@@ -239,7 +286,7 @@
                 remainingTime = getRemainingTime(currentTime, time);
                 overtimeCell.title = `Time left: ${remainingTime}`;
 
-                const approachingBeforeTime = (index === 1 || index === 3 || index === 5) ? 10 : 25; // For 1h30m, 2h30m, 3h30m it's 10 minutes, else 25
+                const approachingBeforeTime = (index === 1 || index === 3 || index === 5) ? 10 : 25; 
 
                 const approachingTime = addMinutes(time, -approachingBeforeTime);
 
@@ -257,20 +304,44 @@
 
             timeRemainingCells[0].textContent = `${getRemainingTime(currentTime, minimumClockOutTime)}`;
             if (currentTime < minimumClockOutTime) {
-                timeRemainingCells[0].classList.add("highlight-remaining");  // Red text for remaining time
+                timeRemainingCells[0].style.color = "red";  
             } else {
-                timeRemainingCells[0].classList.add("highlight-elapsed");  // Orange text for elapsed time
+                timeRemainingCells[0].style.color = "orange";  
             }
 
             overtimeTimes.forEach((time, index) => {
                 if (currentTime < time) {
                     timeRemainingCells[index + 1].textContent = getRemainingTime(currentTime, time);
-                    timeRemainingCells[index + 1].classList.add("highlight-remaining");  // Red text for remaining time
+                    timeRemainingCells[index + 1].style.color = "red";  
                 } else {
                     timeRemainingCells[index + 1].textContent = getElapsedTime(currentTime, time);
-                    timeRemainingCells[index + 1].classList.add("highlight-elapsed");  // Orange text for elapsed time
+                    timeRemainingCells[index + 1].style.color = "orange";  
                 }
             });
+        }
+
+        function updateHistoryTable() {
+            const historyTableBody = document.getElementById("historyTable").getElementsByTagName('tbody')[0];
+            historyTableBody.innerHTML = "";
+
+            historyData.forEach(entry => {
+                const row = historyTableBody.insertRow();
+
+                const clockInCell = row.insertCell(0);
+                clockInCell.textContent = entry.clockIn;
+
+                const minimumClockOutCell = row.insertCell(1);
+                minimumClockOutCell.textContent = entry.minimumClockOutTime;
+
+                entry.overtimeTimes.forEach((time, index) => {
+                    const overtimeCell = row.insertCell(index + 2);
+                    overtimeCell.textContent = time;
+                });
+            });
+        }
+
+        window.onload = function() {
+            calculateTimes();
         }
     </script>
 </body>
