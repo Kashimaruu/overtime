@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,43 +13,58 @@
             font-family: "Inter", sans-serif;
             margin: 20px;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
-        table, th, td {
+
+        table,
+        th,
+        td {
             border: 1px solid #000;
         }
-        th, td {
+
+        th,
+        td {
             padding: 8px;
             text-align: center;
             transition: background-color 0.3s ease;
         }
-        label, input, button {
+
+        label,
+        input,
+        button {
             padding: 8px;
             font-size: 16px;
             margin-right: 10px;
         }
+
         .container {
             margin-bottom: 20px;
         }
+
         .warning {
             color: red;
         }
+
         /* Add hover effect for overtime cells */
         td:hover {
             cursor: pointer;
             opacity: 0.8;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            table-layout: fixed; /* Even column width */
+            table-layout: fixed;
+            /* Even column width */
         }
 
-        th, td {
+        th,
+        td {
             padding: 8px;
             text-align: center;
             transition: background-color 0.3s ease;
@@ -64,46 +80,64 @@
 
         /* Color styles for different overtime states */
         .past {
-            background-color: lightgreen; /* Passed overtime time */
+            background-color: lightgreen;
+            /* Passed overtime time */
         }
+
         .approaching {
-            background-color: yellow; /* Overtime time soon (approaching) */
+            background-color: yellow;
+            /* Overtime time soon (approaching) */
         }
+
         .future {
-            background-color: lightgray; /* Future overtime time */
+            background-color: lightgray;
+            /* Future overtime time */
         }
+
         /* Add color styles for Minimum clock-out time */
         .minimum-past {
-            background-color: green; /* Passed minimum clock-out time */
-            color: white; /* Text color for contrast */
+            background-color: green;
+            /* Passed minimum clock-out time */
+            color: white;
+            /* Text color for contrast */
         }
+
         .minimum-approaching {
-            background-color: yellow; /* Approaching minimum clock-out time (within 10 minutes) */
+            background-color: yellow;
+            /* Approaching minimum clock-out time (within 10 minutes) */
         }
+
         .minimum-future {
-            background-color: lightgray; /* Future minimum clock-out time */
+            background-color: lightgray;
+            /* Future minimum clock-out time */
         }
+
         /* History Table Header - Soft Blue Theme (Lighter) */
         #historyTable thead th {
-            background: linear-gradient(to right, #c5cae9, #e8eaf6); /* light lavender/blue gradient */
+            background: linear-gradient(to right, #c5cae9, #e8eaf6);
+            /* light lavender/blue gradient */
             color: #333;
             font-weight: 500;
             letter-spacing: 0.4px;
             font-size: 13px;
-            border-bottom: 2px solid #9fa8da; /* soft accent border */
+            border-bottom: 2px solid #9fa8da;
+            /* soft accent border */
         }
 
         /* Main Results Table Header - Soft Green Theme */
         #resultsTable thead th {
-            background: linear-gradient(to right, #dcedc8, #f0f4c3); /* light green/yellow gradient */
+            background: linear-gradient(to right, #dcedc8, #f0f4c3);
+            /* light green/yellow gradient */
             color: #333;
             font-weight: 500;
             letter-spacing: 0.4px;
             font-size: 13px;
-            border-bottom: 2px solid #aed581; /* soft green accent */
+            border-bottom: 2px solid #aed581;
+            /* soft green accent */
         }
     </style>
 </head>
+
 <body onload="calculateTimes()">
     <h1>W2G</h1>
 
@@ -196,7 +230,7 @@
             let minimumClockOutTime;
             if (clockInDate < new Date(2000, 0, 1, 7, 30)) {
                 // If it's before 7:30 AM, set the minimum clock-out time to 5:00 PM
-                minimumClockOutTime = new Date(2000, 0, 1, 17, 0); 
+                minimumClockOutTime = new Date(2000, 0, 1, 17, 0);
             } else if (clockInDate < new Date(2000, 0, 1, 9, 30)) {
                 // If it's between 7:30 AM and 9:30 AM, calculate the minimum clock-out time
                 minimumClockOutTime = addMinutes(clockIn, 9 * 60 + 30);
@@ -255,7 +289,7 @@
 
         function parseTime(timeString) {
             const [hours, minutes] = timeString.split(":").map(Number);
-            return new Date(2000, 0, 1, hours, minutes); 
+            return new Date(2000, 0, 1, hours, minutes);
         }
 
         function formatTime(date) {
@@ -283,20 +317,20 @@
             const minutesElapsed = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             const secondsElapsed = Math.floor((diff % (1000 * 60)) / 1000);
 
-            return `+${hoursElapsed}h ${minutesElapsed}m ${secondsElapsed}s`; 
+            return `+${hoursElapsed}h ${minutesElapsed}m ${secondsElapsed}s`;
         }
 
         function getRemainingTime(currentTime, overtimeTime) {
             const diff = overtimeTime - currentTime;
             if (diff < 0) {
-                return getElapsedTime(currentTime, overtimeTime); 
+                return getElapsedTime(currentTime, overtimeTime);
             }
 
             const hoursLeft = Math.floor(diff / (1000 * 60 * 60));
             const minutesLeft = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             const secondsLeft = Math.floor((diff % (1000 * 60)) / 1000);
 
-            return `-${hoursLeft}h ${minutesLeft}m ${secondsLeft}s`; 
+            return `-${hoursLeft}h ${minutesLeft}m ${secondsLeft}s`;
         }
 
         function updateTable(minimumClockOutTime, overtimeTimes, clockInDate) {
@@ -311,15 +345,14 @@
             const minimumClockOutCell = row.insertCell(0);
             minimumClockOutCell.textContent = formatTime(minimumClockOutTime);
             let remainingTime = getRemainingTime(currentTime, minimumClockOutTime);
-            // minimumClockOutCell.title = `Time left: ${remainingTime}`;
 
             const tenMinutesBefore = addMinutes(minimumClockOutTime, -10);
             if (currentTime >= minimumClockOutTime) {
-                minimumClockOutCell.classList.add("minimum-past"); 
+                minimumClockOutCell.classList.add("minimum-past");
             } else if (currentTime >= tenMinutesBefore) {
-                minimumClockOutCell.classList.add("minimum-approaching"); 
+                minimumClockOutCell.classList.add("minimum-approaching");
             } else {
-                minimumClockOutCell.classList.add("minimum-future"); 
+                minimumClockOutCell.classList.add("minimum-future");
             }
 
             overtimeTimes.forEach((time, index) => {
@@ -327,18 +360,17 @@
                 overtimeCell.textContent = formatTime(time);
 
                 remainingTime = getRemainingTime(currentTime, time);
-                // overtimeCell.title = `Time left: ${remainingTime}`;
 
-                const approachingBeforeTime = (index === 1 || index === 3 || index === 5) ? 10 : 25; 
+                const approachingBeforeTime = (index === 1 || index === 3 || index === 5) ? 10 : 25;
 
                 const approachingTime = addMinutes(time, -approachingBeforeTime);
 
                 if (currentTime >= time) {
-                    overtimeCell.classList.add("past"); 
+                    overtimeCell.classList.add("past");
                 } else if (currentTime >= approachingTime) {
-                    overtimeCell.classList.add("approaching"); 
+                    overtimeCell.classList.add("approaching");
                 } else {
-                    overtimeCell.classList.add("future"); 
+                    overtimeCell.classList.add("future");
                 }
             });
 
@@ -347,18 +379,18 @@
 
             timeRemainingCells[0].textContent = `${getRemainingTime(currentTime, minimumClockOutTime)}`;
             if (currentTime < minimumClockOutTime) {
-                timeRemainingCells[0].style.color = "red";  
+                timeRemainingCells[0].style.color = "red";
             } else {
-                timeRemainingCells[0].style.color = "orange";  
+                timeRemainingCells[0].style.color = "orange";
             }
 
             overtimeTimes.forEach((time, index) => {
                 if (currentTime < time) {
                     timeRemainingCells[index + 1].textContent = getRemainingTime(currentTime, time);
-                    timeRemainingCells[index + 1].style.color = "red";  
+                    timeRemainingCells[index + 1].style.color = "red";
                 } else {
                     timeRemainingCells[index + 1].textContent = getElapsedTime(currentTime, time);
-                    timeRemainingCells[index + 1].style.color = "orange";  
+                    timeRemainingCells[index + 1].style.color = "orange";
                 }
             });
         }
@@ -383,9 +415,59 @@
             });
         }
 
-        window.onload = function() {
+        window.onload = function () {
             calculateTimes();
         }
+
+        // Add event listener to detect Enter key press
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                calculateTimes();
+            }
+
+            if (event.key === "Tab") {
+                // Get the clock input element
+                const clockInInput = document.getElementById("clockInTime");
+
+                // Check if the input currently has focus
+                if (document.activeElement === clockInInput) {
+                    // Temporarily remove focus from the input
+                    clockInInput.blur();
+
+                    // Use a small delay before refocusing to allow time for the popup to react
+                    setTimeout(() => {
+                        clockInInput.focus();
+                    }, 50); // Slight delay (50ms)
+                } else {
+                    // If the focus is not on the clock input, just allow the tab to proceed
+                    return true;
+                }
+
+                // Prevent the default tabbing behavior
+                event.preventDefault();
+            }
+        });
+
+        // const params = new URLSearchParams(window.location.search);
+        // const name = params.get('time');
+
+        // document.getElementById('output').textContent = `Name: ${name}`;
+        // Parse ?time=HH:MM from URL and update default clock-in time
+const params = new URLSearchParams(window.location.search);
+const timeParam = params.get('time');
+
+if (timeParam && /^\d{2}:\d{2}$/.test(timeParam)) {
+    const [h, m] = timeParam.split(':').map(Number);
+    if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+        const input = document.getElementById("clockInTime");
+        input.value = timeParam;
+        isInitialTime = false; // Make sure history entry is logged
+        calculateTimes(); // Recalculate using param value
+    }
+}
+
     </script>
+
 </body>
+
 </html>
