@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>OT JSON API</title>
+</head>
+<body>
+<script>
+  function parseTime(timeString) {
+    const [hours, minutes] = timeString.split(":").map(Number);
+    return new Date(2000, 0, 1, hours, minutes);
+  }
+
+  function addMinutes(date, minutes) {
+    const result = new Date(date);
+    result.setMinutes(result.getMinutes() + minutes);
+    return result;
+  }
+
+  function format24h(date) {
+    const h = date.getHours().toString().padStart(2, '0');
+    const m = date.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  }
+
+  function format12h(date) {
+    let h = date.getHours();
+    const m = date.getMinutes().toString().padStart(2, '0');
+    h = h % 12 || 12;
+    return `${h}:${m}`;
+  }
+
+  function getPeriod(date) {
+    return date.getHours() >= 12 ? "PM" : "AM";
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const timeParam = params.get('time');
+
+  if (!timeParam || !/^\d{1,2}:\d{2}$/.test(timeParam)) {
+    document.body.textContent = JSON.stringify({ error: "Invalid or missing 'time' parameter. Use format HH:MM." });
+  } else {
+    const clockIn = parseTime(timeParam);
+    let clockInHours = clockIn.getHours();
+    let clockInMinutes = clockIn.getMinutes();
+
+    let clockInDate = new Date(2000, 0, 1, clockInHours, clockInMinutes);
+    let minimumClockOut;
+
+    if (clockInDate < new Date(2000, 0, 1, 7, 30)) {
+      minimumClockOut = new Date(2000, 0, 1, 17, 0);
+    } else if (clockInDate < new Date(2000, 0, 1, 9, 30)) {
+      minimumClockOut = addMinutes(clockInDate, 9 * 60 + 30);
+    } else {
+      document.body.textContent = JSON.stringify({ error: "Clock-in time must be between 00:00 and 09:30." });
+      throw new Error("Out of bounds time");
+    }
+
+    let overtimeStart = addMinutes(minimumClockOut, 10);
+    let overtimeIntervals = [60, 90, 120, 150, 180, 210, 240];
+    let overtimeTimes = overtimeIntervals.map(i => addMinutes(overtimeStart, i));
+
+    function makeTimeObj(date) {
+      return {
+        "24h": format24h(date),
+        "12h": format12h(date),
+        "period": getPeriod(date)
+      };
+    }
+
+    const response = {
+      clockIn: makeTimeObj(clockInDate),
+      minimumClockOut: makeTimeObj(minimumClockOut)
+    };
+
+    overtimeTimes.forEach((time, index) => {
+      const key = `overtime${index + 1}`;
+      response[key] = makeTimeObj(time);
+    });
+
+    document.body.textContent = JSON.stringify(response, null, 2);
+  }
+</script>
+</body>
+</html>
