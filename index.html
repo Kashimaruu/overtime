@@ -27,12 +27,12 @@
         
         /* Minimum clock-out time states */
         .minimum-past { background-color: green; color: white; }
-        .minimum-approaching { background-color: yellow; }
+        .minimum-approaching { background-color: yellow; color: black; }
         .minimum-future { background-color: lightgray; }
         
         /* First Half-Day states */
         .half-past { background-color: green; color: white; }
-        .half-approaching { background-color: yellow; }
+        .half-approaching { background-color: yellow; color: black; }
         .half-future { background-color: lightgray; }
 
         #historyTable thead th { background: linear-gradient(to right, #c5cae9, #e8eaf6); color: #333; font-weight: 500; border-bottom: 2px solid #9fa8da; }
@@ -56,7 +56,7 @@
             <label for="halfDayToggle" style="margin-right: 20px;">Half-day</label>
             
             <input type="checkbox" id="ramadhanToggle" onchange="calculateTimes()">
-            <label for="ramadhanToggle" style="">🌙 Iftar Break</label>
+            <label for="ramadhanToggle">ð Iftar Break</label>
         </div>
 
         <div id="statusMessage" class="warning"></div>
@@ -72,7 +72,7 @@
                 <th>2 Hour OT</th>
                 <th>2 Hour 30 Min OT</th>
                 <th>3 Hour OT</th>
-                <th>4 Hour 30 Min OT</th>
+                <th>3 Hour 30 Min OT</th>
                 <th>4 Hour OT</th>
             </tr>
         </thead>
@@ -91,14 +91,14 @@
             <tr>
                 <th>Clock In</th>
                 <th class="half-day-col">First Half Clock-out</th>
-                <th>Minimum Clock-out</th>
-                <th>1st OT (1hr 10min)</th>
-                <th>1 Hour 30 Min OT</th>
-                <th>2 Hour OT</th>
-                <th>2 Hour 30 Min OT</th>
-                <th>3 Hour OT</th>
-                <th>4 Hour 30 Min OT</th>
-                <th>4 Hour OT</th>
+                <th>Min Out</th>
+                <th>1st OT</th>
+                <th>1.5h OT</th>
+                <th>2h OT</th>
+                <th>2.5h OT</th>
+                <th>3h OT</th>
+                <th>3.5h OT</th>
+                <th>4h OT</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -110,31 +110,21 @@
         let clockInTimesSet = new Set();  
         let isInitialTime = true;  
 
-        // --- KEYBOARD SHORTCUTS ---
         document.addEventListener("keydown", function (event) {
             const clockInInput = document.getElementById("clockInTime");
-            if (event.key === "Enter") {
-                calculateTimes();
-            }
-            if (event.key === "Tab") {
-                if (document.activeElement === clockInInput) {
-                    event.preventDefault(); 
-                    clockInInput.blur();
-                    setTimeout(() => { clockInInput.focus(); }, 50); 
-                }
+            if (event.key === "Enter") calculateTimes();
+            if (event.key === "Tab" && document.activeElement === clockInInput) {
+                event.preventDefault(); 
+                clockInInput.blur();
+                setTimeout(() => { clockInInput.focus(); }, 50); 
             }
         });
 
-        // --- INITIALIZATION (WITH URL PARAMS) ---
         function initApp() {
             const params = new URLSearchParams(window.location.search);
             const timeParam = params.get('time');
-
             if (timeParam && /^\d{2}:\d{2}$/.test(timeParam)) {
-                const [h, m] = timeParam.split(':').map(Number);
-                if (h >= 0 && h < 24 && m >= 0 && m < 60) {
-                    document.getElementById("clockInTime").value = timeParam;
-                }
+                document.getElementById("clockInTime").value = timeParam;
             }
             calculateTimes();
         }
@@ -152,72 +142,47 @@
             let minimumClockOutTime;
             let firstHalfOutTime = null;
 
-            const time730 = new Date(2000, 0, 1, 7, 30);
-            const time930 = new Date(2000, 0, 1, 9, 30);
-            const time1215 = new Date(2000, 0, 1, 12, 15);
-            const time1415 = new Date(2000, 0, 1, 14, 15);
+            const time730 = new Date(2000, 0, 1, 7, 30), time930 = new Date(2000, 0, 1, 9, 30);
+            const time1215 = new Date(2000, 0, 1, 12, 15), time1415 = new Date(2000, 0, 1, 14, 15);
             const ramadhanStart = new Date(2000, 0, 1, 19, 15);
 
             statusMessage.style.display = "none";
-            statusMessage.className = "warning";
 
-            // Calculation Logic
             if (clockIn < time730) {
                 minimumClockOutTime = new Date(2000, 0, 1, 17, 0); 
             } else if (clockIn <= time930) {
                 minimumClockOutTime = addMinutes(clockIn, 9 * 60 + 30);
             } else if (clockIn > time930 && clockIn < time1215) {
-                let lateMins = Math.floor((clockIn - time930) / 60000);
-                statusMessage.textContent = `Late by ${lateMins} mins! Min Clock-out: 7:00 PM.`;
-                statusMessage.style.display = "block";
                 minimumClockOutTime = new Date(2000, 0, 1, 19, 0);
+                statusMessage.textContent = "Late! Min Clock-out: 7:00 PM.";
+                statusMessage.style.display = "block";
             } else if (clockIn >= time1215 && clockIn <= time1415) {
                 minimumClockOutTime = addMinutes(clockIn, 4 * 60 + 45);
-                statusMessage.textContent = "Second Half Day detected.";
-                statusMessage.className = "notice";
-                statusMessage.style.display = "block";
-            } else if (clockIn > time1415) {
-                let lateMins = Math.floor((clockIn - time1415) / 60000);
-                statusMessage.textContent = `Late for half-day by ${lateMins} mins! Min Clock-out: 7:00 PM.`;
-                statusMessage.style.display = "block";
+            } else {
                 minimumClockOutTime = new Date(2000, 0, 1, 19, 0);
             }
 
             if (clockIn <= time930) firstHalfOutTime = addMinutes(clockIn, 4 * 60 + 45);
+            if (isRamadhan && minimumClockOutTime >= ramadhanStart) minimumClockOutTime = addMinutes(minimumClockOutTime, 30);
 
-            // Ramadhan adjustment for Min Out
-            if (isRamadhan && minimumClockOutTime >= ramadhanStart) {
-                minimumClockOutTime = addMinutes(minimumClockOutTime, 30);
-            }
-
-            // Calculate OT levels
             let overtimeStart = addMinutes(minimumClockOutTime, 10);
             const overtimeTimes = [];
             let intervals = [60, 90, 120, 150, 180, 210, 240];
 
             intervals.forEach(interval => {
                 let otTime = addMinutes(overtimeStart, interval);
-                if (isRamadhan && otTime >= ramadhanStart) {
-                    otTime = addMinutes(otTime, 30);
-                }
+                if (isRamadhan && otTime >= ramadhanStart) otTime = addMinutes(otTime, 30);
                 overtimeTimes.push(otTime);
             });
 
-            // Update UI Columns
             document.querySelectorAll('.half-day-col').forEach(col => col.style.display = showHalfDay ? 'table-cell' : 'none');
             updateTable(minimumClockOutTime, overtimeTimes, clockIn, firstHalfOutTime, showHalfDay);
 
-            // History Log Logic
             if (!isInitialTime) {
                 const clockInFormatted = formatTime(clockIn);
                 if (!clockInTimesSet.has(clockInFormatted)) {
                     clockInTimesSet.add(clockInFormatted);
-                    historyData.push({
-                        clockIn: clockInFormatted,
-                        firstHalfOut: firstHalfOutTime ? formatTime(firstHalfOutTime) : "-",
-                        minOut: formatTime(minimumClockOutTime),
-                        ots: overtimeTimes.map(t => formatTime(t))
-                    });
+                    historyData.push({ clockIn: clockInFormatted, firstHalfOut: firstHalfOutTime ? formatTime(firstHalfOutTime) : "-", minOut: formatTime(minimumClockOutTime), ots: overtimeTimes.map(t => formatTime(t)) });
                 }
             }
             updateHistoryTable(showHalfDay);
@@ -227,58 +192,47 @@
             updateInterval = setInterval(() => updateTable(minimumClockOutTime, overtimeTimes, clockIn, firstHalfOutTime, showHalfDay), 1000);
         }
 
-        function parseTime(ts) {
-            const [h, m] = ts.split(":").map(Number);
-            return new Date(2000, 0, 1, h, m);
-        }
+        function parseTime(ts) { const [h, m] = ts.split(":").map(Number); return new Date(2000, 0, 1, h, m); }
+        function formatTime(d) { let h = d.getHours(), m = d.getMinutes(); let p = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; return `${h}:${m < 10 ? '0'+m : m} ${p}`; }
+        function addMinutes(d, mins) { const res = new Date(d); res.setMinutes(res.getMinutes() + mins); return res; }
+        function getRemainingTime(now, target) { const diff = target - now; const absDiff = Math.abs(diff); const h = Math.floor(absDiff / 3600000); const m = Math.floor((absDiff % 3600000) / 60000); const s = Math.floor((absDiff % 60000) / 1000); return (diff < 0 ? "+" : "-") + `${h}h ${m}m ${s}s`; }
 
-        function formatTime(d) {
-            let h = d.getHours(), m = d.getMinutes();
-            let p = h >= 12 ? "PM" : "AM";
-            h = h % 12 || 12;
-            return `${h}:${m < 10 ? '0'+m : m} ${p}`;
-        }
-
-        function addMinutes(d, mins) {
-            const res = new Date(d);
-            res.setMinutes(res.getMinutes() + mins);
-            return res;
-        }
-
-        function getRemainingTime(now, target) {
-            const diff = target - now;
-            const absDiff = Math.abs(diff);
-            const h = Math.floor(absDiff / 3600000);
-            const m = Math.floor((absDiff % 3600000) / 60000);
-            const s = Math.floor((absDiff % 60000) / 1000);
-            const sign = diff < 0 ? "+" : "-";
-            return `${sign}${h}h ${m}m ${s}s`;
+        // Logic helper with specific thresholds
+        function getStatusClass(now, target, type, thresholdMins) {
+            if (!target) return "";
+            const diffMins = (target - now) / 60000;
+            if (now >= target) return ` ${type}-past`;
+            if (diffMins <= thresholdMins) return ` ${type}-approaching`;
+            return ` ${type}-future`;
         }
 
         function updateTable(minOut, ots, clockIn, halfOut, showHalf) {
             const body = document.querySelector("#resultsTable tbody");
             body.innerHTML = "";
-            const now = new Date();
-            now.setFullYear(2000, 0, 1);
-
+            const now = new Date(); now.setFullYear(2000, 0, 1);
             const row = body.insertRow();
             
-            // Half Out Cell
+            // Half Day Cell (30 min threshold)
             const c0 = row.insertCell(); c0.className = "half-day-col";
             c0.style.display = showHalf ? 'table-cell' : 'none';
             if (halfOut) {
                 c0.textContent = formatTime(halfOut);
-                c0.className += now >= halfOut ? " half-past" : " half-future";
+                c0.className += getStatusClass(now, halfOut, "half", 30);
             } else { c0.textContent = "N/A"; c0.className += " half-future"; }
 
-            // Min Out Cell
+            // Min Out Cell (30 min threshold)
             const c1 = row.insertCell(); c1.textContent = formatTime(minOut);
-            c1.className = now >= minOut ? " minimum-past" : " minimum-future";
+            c1.className = getStatusClass(now, minOut, "minimum", 30);
 
-            // OT Cells
-            ots.forEach(t => {
+            // OT Cells (15 min for first, 10 min for others)
+            ots.forEach((t, index) => {
                 const c = row.insertCell(); c.textContent = formatTime(t);
-                c.className = now >= t ? " past" : " future";
+                const threshold = (index === 0) ? 15 : 10;
+                const diffMins = (t - now) / 60000;
+                
+                if (now >= t) c.className = "past";
+                else if (diffMins <= threshold) c.className = "approaching";
+                else c.className = "future";
             });
 
             // Footers
@@ -286,7 +240,6 @@
             if (halfOut) footCells[0].textContent = getRemainingTime(now, halfOut);
             footCells[1].textContent = getRemainingTime(now, minOut);
             ots.forEach((t, i) => footCells[i+2].textContent = getRemainingTime(now, t));
-            
             footCells.forEach((c, i) => {
                 const target = i === 0 ? halfOut : (i === 1 ? minOut : ots[i-2]);
                 if (target) c.style.color = now < target ? "red" : "orange";
