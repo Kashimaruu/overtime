@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
  
     <style>
+        * { box-sizing: border-box; }
+ 
         body { font-family: "Inter", sans-serif; margin: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; }
         table, th, td { border: 1px solid #000; }
@@ -20,17 +22,14 @@
         .notice { color: green; margin-top: 10px; font-weight: 500; }
         td:hover { cursor: pointer; opacity: 0.8; }
  
-        /* Standard OT states */
         .past { background-color: lightgreen; }
         .approaching { background-color: yellow; }
         .future { background-color: lightgray; }
  
-        /* Minimum clock-out time states */
         .minimum-past { background-color: green; color: white; }
         .minimum-approaching { background-color: yellow; color: black; }
         .minimum-future { background-color: lightgray; }
  
-        /* First Half-Day states */
         .half-past { background-color: green; color: white; }
         .half-approaching { background-color: yellow; color: black; }
         .half-future { background-color: lightgray; }
@@ -58,6 +57,114 @@
             border-radius: 5px;
             display: inline-block;
         }
+ 
+        .mobile-only { display: none; }
+ 
+        @media (max-width: 768px) {
+            html, body {
+                width: 100%;
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+ 
+            body {
+                margin: 0;
+                padding: 12px;
+                min-height: 100dvh;
+                font-size: 13px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+ 
+            h1 {
+                margin: 0;
+                font-size: 22px;
+                line-height: 1.1;
+            }
+ 
+            h2, #historyTable, #resultsTable {
+                display: none !important;
+            }
+ 
+            .container {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+            }
+ 
+            .container > label {
+                margin: 0;
+                font-size: 13px;
+            }
+ 
+            #clockInTime,
+            .container button {
+                width: 100%;
+                margin: 0;
+                font-size: 16px;
+                padding: 10px;
+            }
+ 
+            .checkbox-container {
+                margin-top: 0;
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 6px 12px;
+                padding: 8px;
+            }
+ 
+            .checkbox-container label {
+                margin: 0 !important;
+                font-size: 13px;
+            }
+ 
+            #statusMessage {
+                margin-top: 2px;
+                font-size: 12px;
+            }
+ 
+            .mobile-only {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 8px;
+                align-content: start;
+            }
+ 
+            .mobile-card {
+                border: 1px solid #999;
+                border-radius: 10px;
+                padding: 10px;
+                line-height: 1.2;
+                min-height: 92px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+ 
+            .mobile-card.primary {
+                border: 2px solid #2e7d32;
+            }
+ 
+            .mobile-card .title {
+                font-weight: 700;
+                font-size: 12px;
+                margin-bottom: 4px;
+            }
+ 
+            .mobile-card .time {
+                font-size: 24px;
+                font-weight: 700;
+            }
+ 
+            .mobile-card .remaining {
+                font-size: 12px;
+                margin-top: 4px;
+                opacity: 0.9;
+            }
+        }
     </style>
 </head>
  
@@ -69,7 +176,6 @@
         <input type="time" id="clockInTime" value="08:15" />
         <button onclick="calculateTimes()">Calculate Overtime</button>
  
-        <br />
         <div class="checkbox-container">
             <input type="checkbox" id="halfDayToggle" onchange="calculateTimes()" />
             <label for="halfDayToggle" style="margin-right: 20px;">Half-day</label>
@@ -111,6 +217,8 @@
         </tfoot>
     </table>
  
+    <div id="mobileView" class="mobile-only"></div>
+ 
     <h2>History</h2>
     <table id="historyTable">
         <thead>
@@ -146,10 +254,7 @@
  
         document.addEventListener("keydown", (event) => {
             const clockInInput = document.getElementById("clockInTime");
- 
-            if (event.key === "Enter") {
-                calculateTimes();
-            }
+            if (event.key === "Enter") calculateTimes();
  
             if (event.key === "Tab" && document.activeElement === clockInInput) {
                 event.preventDefault();
@@ -161,11 +266,9 @@
         function initApp() {
             const params = new URLSearchParams(window.location.search);
             const timeParam = params.get("time");
- 
             if (timeParam && /^\d{2}:\d{2}$/.test(timeParam)) {
                 document.getElementById("clockInTime").value = timeParam;
             }
- 
             calculateTimes();
         }
  
@@ -191,8 +294,6 @@
             statusMessage.style.display = "none";
             statusMessage.textContent = "";
  
-            // New rule:
-            // 7:00 AM or earlier => 4:30 PM minimum clock-out
             if (clockIn <= time700) {
                 minimumClockOutTime = makeTime(16, 30);
             } else if (clockIn <= time930) {
@@ -207,9 +308,7 @@
                 minimumClockOutTime = makeTime(19, 0);
             }
  
-            if (clockIn <= time930) {
-                firstHalfOutTime = addMinutes(clockIn, 4 * 60 + 45);
-            }
+            if (clockIn <= time930) firstHalfOutTime = addMinutes(clockIn, 4 * 60 + 45);
  
             if (isRamadhan && minimumClockOutTime >= ramadhanStart) {
                 minimumClockOutTime = addMinutes(minimumClockOutTime, 30);
@@ -221,9 +320,7 @@
  
             intervals.forEach((interval) => {
                 let otTime = addMinutes(overtimeStart, interval);
-                if (isRamadhan && otTime >= ramadhanStart) {
-                    otTime = addMinutes(otTime, 30);
-                }
+                if (isRamadhan && otTime >= ramadhanStart) otTime = addMinutes(otTime, 30);
                 overtimeTimes.push(otTime);
             });
  
@@ -291,6 +388,81 @@
             return `${type}-future`;
         }
  
+        function getOtCellClass(now, target, index) {
+            const threshold = index === 0 ? 15 : 10;
+            const diffMins = (target - now) / 60000;
+            if (now >= target) return "past";
+            if (diffMins <= threshold) return "approaching";
+            return "future";
+        }
+ 
+        function makePlaceholderCard(label) {
+            return { label, time: null, type: "placeholder" };
+        }
+ 
+        function renderMobileView(minOut, ots, halfOut, showHalf) {
+            const mobile = document.getElementById("mobileView");
+            if (!mobile) return;
+ 
+            const now = new Date();
+            now.setFullYear(BASE_YEAR, BASE_MONTH, BASE_DAY);
+ 
+            const otLabels = ["1st OT", "1.5h OT", "2h OT", "2.5h OT", "3h OT", "3.5h OT", "4h OT"];
+            const upcoming = ots
+                .map((time, idx) => ({ label: otLabels[idx], time, idx }))
+                .filter((x) => x.time > now);
+ 
+            const cardData = [];
+ 
+            if (showHalf) {
+                if (halfOut) {
+                    cardData.push({ label: "First Half Out", time: halfOut, type: "half" });
+                } else {
+                    cardData.push(makePlaceholderCard("First Half Out"));
+                }
+            }
+ 
+            cardData.push({ label: "Minimum Out", time: minOut, type: "minimum", primary: true });
+            cardData.push(upcoming[0] ? { label: `Next OT (${upcoming[0].label})`, time: upcoming[0].time, type: "ot", idx: upcoming[0].idx } : makePlaceholderCard("Next OT"));
+            cardData.push(upcoming[1] ? { label: `Next+1 OT (${upcoming[1].label})`, time: upcoming[1].time, type: "ot", idx: upcoming[1].idx } : makePlaceholderCard("Next+1 OT"));
+ 
+            mobile.innerHTML = "";
+ 
+            cardData.forEach((item) => {
+                const card = document.createElement("div");
+                card.className = "mobile-card";
+                if (item.primary) card.classList.add("primary");
+ 
+                if (!item.time) {
+                    card.classList.add("future");
+                    card.innerHTML = `
+                        <div class="title">${item.label}</div>
+                        <div class="time" style="font-size:20px;">--</div>
+                        <div class="remaining">No upcoming target</div>
+                    `;
+                    mobile.appendChild(card);
+                    return;
+                }
+ 
+                if (item.type === "half") {
+                    const c = getStatusClass(now, item.time, "half", 30);
+                    if (c) card.classList.add(c);
+                } else if (item.type === "minimum") {
+                    const c = getStatusClass(now, item.time, "minimum", 30);
+                    if (c) card.classList.add(c);
+                } else {
+                    card.classList.add(getOtCellClass(now, item.time, item.idx));
+                }
+ 
+                card.innerHTML = `
+                    <div class="title">${item.label}</div>
+                    <div class="time">${formatTime(item.time)}</div>
+                    <div class="remaining">${getRemainingTime(now, item.time)}</div>
+                `;
+                mobile.appendChild(card);
+            });
+        }
+ 
         function updateTable(minOut, ots, halfOut, showHalf) {
             const body = document.querySelector("#resultsTable tbody");
             body.innerHTML = "";
@@ -321,12 +493,7 @@
             ots.forEach((t, index) => {
                 const c = row.insertCell();
                 c.textContent = formatTime(t);
-                const threshold = index === 0 ? 15 : 10;
-                const diffMins = (t - now) / 60000;
- 
-                if (now >= t) c.className = "past";
-                else if (diffMins <= threshold) c.className = "approaching";
-                else c.className = "future";
+                c.className = getOtCellClass(now, t, index);
             });
  
             const footCells = document.querySelectorAll("#timeRemainingRow td");
@@ -344,6 +511,8 @@
                 }
                 cell.style.color = now < target ? "red" : "orange";
             });
+ 
+            renderMobileView(minOut, ots, halfOut, showHalf);
         }
  
         function updateHistoryTable(showHalf) {
@@ -360,9 +529,7 @@
                 hCell.textContent = entry.firstHalfOut;
  
                 row.insertCell(2).textContent = entry.minOut;
-                entry.ots.forEach((ot) => {
-                    row.insertCell().textContent = ot;
-                });
+                entry.ots.forEach((ot) => row.insertCell().textContent = ot);
             });
         }
     </script>
